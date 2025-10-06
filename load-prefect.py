@@ -1,16 +1,11 @@
 import duckdb
+from prefect import task, flow
 import os
 import logging
 import time
 
-logging.basicConfig(
-    level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='load.log'
-)
-logger = logging.getLogger(__name__)
-
+@task(name="load_parquet_files", retries=3, retry_delay_seconds=60)
 def load_parquet_files():
-
     con = None
     yellow_base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_"
     green_base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_"
@@ -45,7 +40,7 @@ def load_parquet_files():
         # import YELLOW taxi data from 2024 to 2025
         # loop through years and months
         for year in range(2024, 2025):
-            for month in range(1, 13):
+            for month in range(1, 2):
                 date_str = f"{year}-{month:02d}"
                 con.execute(f"""
                     INSERT INTO tripdata
@@ -67,7 +62,7 @@ def load_parquet_files():
         # import GREEN taxi data from 2024 to 2025
         # loop through years and months
         for year in range(2024, 2025):
-            for month in range(1, 13):
+            for month in range(1, 2):
                 date_str = f"{year}-{month:02d}"
                 con.execute(f"""
                     INSERT INTO tripdata
@@ -87,7 +82,7 @@ def load_parquet_files():
         logger.info("All GREEN parquet files loaded successfully")
 
         con.execute(f"""
-            CREATE TABLE vehicle_emissions AS
+            CREATE OR REPLACE TABLE vehicle_emissions AS
             SELECT * FROM read_csv_auto('./data/vehicle_emissions.csv');
         """)
         logger.info("vehicle_emissions table created")
@@ -127,5 +122,13 @@ def load_parquet_files():
         print(f"An error occurred: {e}")
         logger.error(f"An error occurred: {e}")
 
-if __name__ == "__main__":
+@flow(name="data_intake", description="Load data into DuckDB")
+def data_intake():
     load_parquet_files()
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='load.log'
+    )
+    logger = logging.getLogger(__name__)
+    data_intake()
