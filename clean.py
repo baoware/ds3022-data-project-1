@@ -71,7 +71,7 @@ def clean_table():
             DELETE FROM tripdata
             WHERE fare_amount < 0;
             DELETE FROM tripdata
-            WHERE passenger_count = 0;
+            WHERE passenger_count = 0 OR passenger_count IS NULL;
             DELETE FROM tripdata
             WHERE EXTRACT(EPOCH FROM (dropoff_datetime - pickup_datetime)) > 86400;
             DELETE FROM tripdata
