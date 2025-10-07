@@ -4,17 +4,11 @@ import os
 import logging
 import time
 
-@task(name="load_parquet_files", retries=3, retry_delay_seconds=60)
-def load_parquet_files():
-    con = None
-    yellow_base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_"
-    green_base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_"
+@task(name="connect_and_setup_tables")
+def connect_and_setup_tables(con):
+    logger.info("Connected to DuckDB instance")
 
     try:
-        # Connect to local DuckDB instance
-        con = duckdb.connect(database='emissions.duckdb', read_only=False)
-        logger.info("Connected to DuckDB instance")
-
         con.execute(f"""
             -- SQL goes here
             CREATE OR REPLACE TABLE tripdata (
@@ -34,8 +28,24 @@ def load_parquet_files():
                 week_of_year INTEGER,
                 month_of_year INTEGER
             );
-        """)
+            """)
         logger.info("Created primary table")
+        return con  # return the connection object
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
+        return None
+
+@task(name="load_parquet_files", retries=5, retry_delay_seconds=60)
+def load_parquet_files(con):
+    yellow_base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_"
+    green_base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_"
+
+    try:
+        # Connect to local DuckDB instance
+        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # logger.info("Connected to DuckDB instance")
 
         # import YELLOW taxi data from 2024 to 2025
         # loop through years and months
@@ -56,7 +66,7 @@ def load_parquet_files():
                     FROM read_parquet('{yellow_base_url}{date_str}.parquet');
                 """)
                 logger.info(f"Loaded {date_str} YELLOW parquet into tripdata table")
-                time.sleep(60)  # Sleep to avoid overwhelming the server
+                time.sleep(20)  # Sleep to avoid overwhelming the server
         logger.info("All YELLOW parquet files loaded successfully")
 
         # import GREEN taxi data from 2024 to 2025
@@ -78,7 +88,7 @@ def load_parquet_files():
                     FROM read_parquet('{green_base_url}{date_str}.parquet');
                 """)
                 logger.info(f"Loaded {date_str} GREEN parquet into tripdata table")
-                time.sleep(60)  # Sleep to avoid overwhelming the server
+                time.sleep(20)  # Sleep to avoid overwhelming the server
         logger.info("All GREEN parquet files loaded successfully")
 
         con.execute(f"""
@@ -123,12 +133,14 @@ def load_parquet_files():
         logger.error(f"An error occurred: {e}")
 
 @flow(name="data_intake", description="Load data into DuckDB")
-def data_intake():
-    load_parquet_files()
+def data_intake(con):
+    connect_and_setup_tables(con)
+    load_parquet_files(con)
 
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='load.log'
     )
     logger = logging.getLogger(__name__)
-    data_intake()
+    con = duckdb.connect(database='emissions.duckdb', read_only=False)
+    data_intake(con)
