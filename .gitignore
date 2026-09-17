@@ -1,0 +1,16 @@
+# local data and database
+*.duckdb
+*.duckdb.wal
+*.parquet
+
+# logs
+*.log
+
+# python
+.venv/
+__pycache__/
+
+# dbt
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
