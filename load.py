@@ -12,6 +12,7 @@ DB_PATH = 'emissions.duckdb'
 BASE_URL = 'https://d37ci6vzurychx.cloudfront.net/trip-data'
 YEAR = 2024
 MONTHS = range(1, 13)
+EMISSIONS_CSV = os.path.join('data', 'vehicle_emissions.csv')
 
 TAXI_TYPES = {
     'yellow': 'tpep',
@@ -66,6 +67,22 @@ def load_trip_table(con, taxi_type, prefix, year=YEAR, months=MONTHS):
     return table
 
 
+def load_emissions_table(con, csv_path=EMISSIONS_CSV):
+    con.execute(f"""
+        CREATE OR REPLACE TABLE vehicle_emissions AS
+        SELECT * FROM read_csv_auto('{csv_path}', header=True);
+    """)
+    logger.info(f"Loaded vehicle_emissions from {csv_path}")
+    return 'vehicle_emissions'
+
+
+def report_row_counts(con, tables):
+    for table in tables:
+        count = con.execute(f"SELECT COUNT(*) FROM {table};").fetchone()[0]
+        print(f"{table}: {count:,} raw rows")
+        logger.info(f"{table}: {count} raw rows")
+
+
 def load_parquet_files():
 
     con = None
@@ -75,8 +92,12 @@ def load_parquet_files():
         con = duckdb.connect(database=DB_PATH, read_only=False)
         logger.info("Connected to DuckDB instance")
 
+        tables = []
         for taxi_type, prefix in TAXI_TYPES.items():
-            load_trip_table(con, taxi_type, prefix)
+            tables.append(load_trip_table(con, taxi_type, prefix))
+        tables.append(load_emissions_table(con))
+
+        report_row_counts(con, tables)
 
     except Exception as e:
         print(f"An error occurred: {e}")
