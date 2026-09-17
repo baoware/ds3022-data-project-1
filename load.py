@@ -42,6 +42,30 @@ def create_trip_table(con, taxi_type):
     return table
 
 
+def load_trip_table(con, taxi_type, prefix, year=YEAR, months=MONTHS):
+    table = create_trip_table(con, taxi_type)
+    for url in parquet_urls(taxi_type, year, months):
+        try:
+            con.execute(f"""
+                INSERT INTO {table}
+                SELECT
+                    VendorID,
+                    {prefix}_pickup_datetime,
+                    {prefix}_dropoff_datetime,
+                    passenger_count,
+                    trip_distance,
+                    PULocationID,
+                    DOLocationID,
+                    total_amount
+                FROM read_parquet('{url}');
+            """)
+            logger.info(f"Inserted {url} into {table}")
+        except Exception as e:
+            logger.error(f"Failed to insert {url} into {table}: {e}")
+            raise
+    return table
+
+
 def load_parquet_files():
 
     con = None
@@ -51,8 +75,8 @@ def load_parquet_files():
         con = duckdb.connect(database=DB_PATH, read_only=False)
         logger.info("Connected to DuckDB instance")
 
-        for taxi_type in TAXI_TYPES:
-            create_trip_table(con, taxi_type)
+        for taxi_type, prefix in TAXI_TYPES.items():
+            load_trip_table(con, taxi_type, prefix)
 
     except Exception as e:
         print(f"An error occurred: {e}")
