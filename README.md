@@ -1,5 +1,26 @@
 # DS3022 - Data Project 1 (Fall 2025)
 
+## My Pipeline
+
+**What it does:** `load.py` reads all 24 monthly 2024 yellow/green Parquet files into DuckDB (`emissions.duckdb`),
+`clean.py` removes duplicates and invalid trips and verifies each rule, `transform.py` adds the CO2, speed, and
+time columns, and `analysis.py` prints and logs the results and saves `co2_by_month.png`. Each stage writes its own log.
+
+**How to run:**
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python run_pipeline.py          # load -> clean -> transform -> analysis
+```
+
+**Design decisions:**
+- Parquet files are read straight from the TLC URLs (built in a loop), so nothing is downloaded or committed.
+- Only the columns needed later are loaded, and `tpep_`/`lpep_` pickup/dropoff columns are renamed to `pickup_datetime`/`dropoff_datetime` so both tables share the same SQL.
+- Each cleaning rule is one SQL condition used both to delete rows and to verify none remain. Missing passenger counts (NULL) are kept, since unknown is not 0.
+- `trip_co2_kgs` joins to `vehicle_emissions` at run time; `avg_mph` is NULL when dropoff is not after pickup.
+- Hours are 0-23, days 0 (Sun) - 6 (Sat), weeks are ISO weeks. Heaviest/lightest means highest/lowest average CO2 per trip.
+
 ## Assignment
 
 <img src="https://s3.amazonaws.com/uvasds-systems/images/nyc-taxi-graphic.png" style="align:right;float:right;max-width:50%;">
