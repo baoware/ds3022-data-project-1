@@ -25,6 +25,7 @@ MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 
+# function to print a line and write the same line to the log
 def report(line):
     print(line)
     logger.info(line)
@@ -74,6 +75,7 @@ def monthly_totals(con, table):
     return [totals.get(month, 0) for month in range(1, 13)]
 
 
+# function to plot monthly co2 totals, one line per taxi type, saved as a png
 def plot_monthly_totals(totals_by_label, path=PLOT_PATH):
     fig, ax = plt.subplots(figsize=(10, 6))
     for label, totals in totals_by_label.items():
@@ -89,6 +91,7 @@ def plot_monthly_totals(totals_by_label, path=PLOT_PATH):
     report(f"Wrote monthly CO2 plot to {path}")
 
 
+# main function: answer each analysis question per taxi type, then plot
 def analyze_trips():
 
     con = None
@@ -116,6 +119,8 @@ def analyze_trips():
     except Exception as e:
         print(f"An error occurred: {e}")
         logger.error(f"An error occurred: {e}")
+        # non-zero exit so run_pipeline.py stops at the failed stage
+        raise SystemExit(1)
 
     finally:
         if con is not None:

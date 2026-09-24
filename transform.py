@@ -82,6 +82,7 @@ def update_time_parts(con, table):
     logger.info(f"{table}: extracted hour_of_day, day_of_week, week_of_year, month_of_year")
 
 
+# function to print and log summary stats proving the new columns were filled
 def report_transform(con, table):
     stats = con.execute(f"""
         SELECT
@@ -107,6 +108,7 @@ def report_transform(con, table):
         logger.info(line)
 
 
+# main function: add and fill the new columns for each trip table
 def transform_trips():
 
     con = None
@@ -128,6 +130,8 @@ def transform_trips():
     except Exception as e:
         print(f"An error occurred: {e}")
         logger.error(f"An error occurred: {e}")
+        # non-zero exit so run_pipeline.py stops at the failed stage
+        raise SystemExit(1)
 
     finally:
         if con is not None:

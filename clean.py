@@ -81,6 +81,7 @@ def verify_clean(con, table):
     logger.info(f"{table}: all cleaning checks passed")
 
 
+# main function: dedup, apply rules, and verify each trip table
 def clean_parquet():
 
     con = None
@@ -107,6 +108,8 @@ def clean_parquet():
     except Exception as e:
         print(f"An error occurred: {e}")
         logger.error(f"An error occurred: {e}")
+        # non-zero exit so run_pipeline.py stops at the failed stage
+        raise SystemExit(1)
 
     finally:
         if con is not None:

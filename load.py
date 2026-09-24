@@ -71,6 +71,7 @@ def load_trip_table(con, taxi_type, prefix, year=YEAR, months=MONTHS):
     return table
 
 
+# function to load the vehicle emissions csv into a lookup table
 def load_emissions_table(con, csv_path=EMISSIONS_CSV):
     con.execute(f"""
         CREATE OR REPLACE TABLE vehicle_emissions AS
@@ -89,6 +90,7 @@ def report_row_counts(con, tables):
         logger.info(f"{table}: {count} raw rows")
 
 
+# main function: connect, load both trip tables and the lookup, then report counts
 def load_parquet_files():
 
     con = None
@@ -112,6 +114,8 @@ def load_parquet_files():
     except Exception as e:
         print(f"An error occurred: {e}")
         logger.error(f"An error occurred: {e}")
+        # non-zero exit so run_pipeline.py stops at the failed stage
+        raise SystemExit(1)
 
     finally:
         if con is not None:
